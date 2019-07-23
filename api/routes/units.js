@@ -133,4 +133,87 @@ router.get('/:id/company/employees/:empId', async (req, res, next) => {
   }
 })
 
+router.post('/:id/company/employees', async (req, res, next) => {
+  const status = 201
+  const { id } = req.params
+
+  try {
+    const unit = await Units.findById(id).select('-__v')
+    if(unit === null) {
+      next({ status: 404, message: 'Unit not found'})
+    } else if(!unit.company) {
+      next({ status: 404, message: 'Company not found. Unit is unoccupied.'})
+    }
+
+    if(!unit.company.employees) {
+      unit.company.employees = []
+    }
+    unit.company.employees.push(req.body)
+    const { _id, kind, floor, special_monthly_offer, created_at, updated_at, company } = await unit.save()
+    const response = { _id, kind, floor, special_monthly_offer, created_at, updated_at, company }
+    res.status(201).json({ status, response })
+  } catch (err) {
+    if(err.name === 'ValidationError') {
+      next({ status: 400, message: err })
+    } else {
+      next({ status: 500, message: err })
+    }
+  }
+})
+
+router.patch('/:id/company/employees/:empId', async (req, res, next) => {
+  const status = 200
+  const { id, empId } = req.params
+
+  try {
+    const unit = await Units.findById(id).select('-__v')
+    if(unit === null) {
+      next({ status: 404, message: 'Unit not found'})
+    } else if(!unit.company) {
+      next({ status: 404, message: 'Company not found. Unit is unoccupied.'})
+    } else if(!unit.company.employees.id(empId)) {
+      next({ status: 404, message: 'Employee not found.'})
+    }
+    
+    Object.assign(unit.company.employees.id(empId), req.body)
+    const { _id, kind, floor, special_monthly_offer, created_at, updated_at, company } = await unit.save()
+    const response = { _id, kind, floor, special_monthly_offer, created_at, updated_at, company }
+    res.json({ status, response })
+  } catch (err) {
+    if(err.name === 'ValidationError') {
+      next({ status: 400, message: err })
+    } else {
+      next({ status: 500, message: err })
+    }
+  }
+})
+
+router.delete('/:id/company/employees/:empId', async (req, res, next) => {
+  const status = 200
+  const { id, empId } = req.params
+
+  try {
+    const unit = await Units.findById(id).select('-__v')
+    if(unit === null) {
+      next({ status: 404, message: 'Unit not found'})
+    } else if(!unit.company) {
+      next({ status: 404, message: 'Company not found. Unit is unoccupied.'})
+    } else if(!unit.company.employees.id(empId)) {
+      next({ status: 404, message: 'Employee not found.'})
+    }
+
+    const emp = unit.company.employees.id(empId)
+    emp.remove()
+    await unit.save()
+    const response = emp
+    res.json({ status, response })
+  } catch (err) {
+    if(err.name === 'ValidationError') {
+      next({ status: 400, message: err })
+    } else {
+      next({ status: 500, message: err })
+    }
+  }
+})
+
 module.exports = router
