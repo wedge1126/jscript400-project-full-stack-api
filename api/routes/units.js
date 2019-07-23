@@ -51,4 +51,27 @@ router.patch('/:id', async (req, res, next) => {
   }
 })
 
+router.patch('/:id/company', async (req, res, next) => {
+  const status = 200
+  const { id } = req.params
+
+  try {
+    const unit = await Units.findById(id).select('-__v')
+    if(unit === null) {
+      next({ status: 404, message: 'Unit not found'})
+    }
+
+    Object.assign(unit.company, req.body)
+    const { _id, kind, floor, special_monthly_offer, created_at, updated_at, company } = await unit.save()
+    const response = { _id, kind, floor, special_monthly_offer, created_at, updated_at, company }
+    res.json({ status, response })
+  } catch (err) {
+    if(err.name === 'ValidationError') {
+      next({ status: 400, message: err })
+    } else {
+      next({ status: 500, message: err })
+    }
+  }
+})
+
 module.exports = router
